@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # =================================================================================
+  # 🚀 CORE ENTRYWAY: HARDENED PARALLEL & CUDA TELEMETRY NETWORK GATEWAY
+  # =================================================================================
+  network-bridge:
+    container_name: univac_ix_network_bridge
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agriculture-pathology-institute/network-bridge:latest
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OMP_NUM_THREADS=4           
+      - NUMBA_NUM_THREADS=4         
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - ./config.yaml:/app/config.yaml:ro
+      - /tmp:/tmp
+    healthcheck:
+      test: ["CMD-SHELL", "cat /tmp/bridge_health.state | grep -q 'HEALTHY'"]
+      interval: 5s
+      timeout: 2s
+      retries: 2
+      start_period: 5s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  
+              capabilities: [gpu, utility] 
+    command: ["python", "src/hardware/rt_json_network_bridge.py", "--network-port", "8080", "--visio-csv", "/app/data/visio_mapping.csv", "--gpu"]
+
+  # =================================================================================
+  # 🚨 POST-RESTART RECOVERY TRAP CONTROLLER
+  # =================================================================================
+  recovery-trap-signal:
+    container_name: univac_ix_recovery_trap
+    image: agriculture-pathology-institute/network-bridge:latest
+    restart: on-failure
+    depends_on:
+      - network-bridge
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - /tmp:/tmp
+      - ./src/hardware/rt_recovery_trap.py:/app/rt_recovery_trap.py:ro
+    command: ["python", "/app/rt_recovery_trap.py"]
+
+  # =================================================================================
+  # 🏛️ DETERMINISTIC COMPLIANCE AUDITOR AND SYSTEM INTEGRITY GATEWAY
+  # =================================================================================
+  validation-engine:
+    container_name: univac_ix_validator
+    image: node:18-alpine
+    restart: always
+    depends_on:
+      network-bridge:
+        condition: service_healthy
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - ./validate-config.js:/app/validate-config.js:ro
+    working_dir: /app
+    environment:
+      - NODE_ENV=production
+    command: ["node", "validate-config.js"]
+
+volumes:
+  shared-telemetry-fabric:
+    name: shared_telemetry_fabric
+    driver: local
