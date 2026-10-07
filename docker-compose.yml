@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # =================================================================================
+  # 🚀 CORE ENTRYWAY: HARDERED PARALLEL & CUDA TELEMETRY NETWORK GATEWAY
+  # =================================================================================
+  network-bridge:
+    container_name: univac_ix_network_bridge
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agriculture-pathology-institute/network-bridge:latest
+    restart: always
+    ports:
+      - "8080:8080"  # Ingest 12-pin twist-lock hardware socket frames
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OMP_NUM_THREADS=4           # Optimize Numba multi-core CPU thread count bounds
+      - NUMBA_NUM_THREADS=4         # Enforce parallel prange alignment across available cores
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - ./config.yaml:/app/config.yaml:ro
+    # -------------------------------------------------------------------------------
+    # ⚡ NATIVE HARDWARE ACCELERATION GATEWAY RUNTIME HANDLES
+    # -------------------------------------------------------------------------------
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  # Allocates all available on-board GPU devices to the container grid
+              capabilities: [gpu, utility] # Passes raw CUDA matrix execution handles
+    command: ["python", "src/hardware/rt_json_network_bridge.py", "--network-port", "8080", "--visio-csv", "/app/data/visio_mapping.csv", "--gpu"]
+
+  # =================================================================================
+  # 🏛️ DETERMINISTIC COMPLIANCE AUDITOR AND SYSTEM INTEGRITY GATEWAY
+  # =================================================================================
+  validation-engine:
+    container_name: univac_ix_validator
+    image: node:18-alpine
+    restart: always
+    depends_on:
+      - network-bridge
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - ./validate-config.js:/app/validate-config.js:ro
+    working_dir: /app
+    environment:
+      - NODE_ENV=production
+    command: ["node", "validate-config.js"]
+
+volumes:
+  shared-telemetry-fabric:
+    name: shared_telemetry_fabric
+    driver: local
