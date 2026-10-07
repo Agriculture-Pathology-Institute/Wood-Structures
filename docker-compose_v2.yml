@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # =================================================================================
+  # 🚀 CORE ENTRYWAY: HARDENED PARALLEL & CUDA TELEMETRY NETWORK GATEWAY
+  # =================================================================================
+  network-bridge:
+    container_name: univac_ix_network_bridge
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agriculture-pathology-institute/network-bridge:latest
+    restart: always
+    ports:
+      - "8080:8080"  # Ingest 12-pin twist-lock hardware socket frames
+    environment:
+      - PYTHONUNBUFFERED=1
+      - OMP_NUM_THREADS=4           
+      - NUMBA_NUM_THREADS=4         
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - ./config.yaml:/app/config.yaml:ro
+    # -------------------------------------------------------------------------------
+    # 🩹 AUTONOMIC REAL-TIME HEALTH-CHECK MONITOR (AIR-GAP DESTRUCT LOOP)
+    # -------------------------------------------------------------------------------
+    healthcheck:
+      test: ["CMD-SHELL", "cat /tmp/bridge_health.state | grep -q 'HEALTHY'"]
+      interval: 5s     # Check the lock integrity loop status every 5 seconds
+      timeout: 2s      # Throw an isolated timeout warning if the file read blocks
+      retries: 2       # If the system reports a hardware fault 2 consecutive times, trip failure
+      start_period: 5s # Grace period allowing Numba to pre-compile JIT routines on boot
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all  
+              capabilities: [gpu, utility] 
+    command: ["python", "src/hardware/rt_json_network_bridge.py", "--network-port", "8080", "--visio-csv", "/app/data/visio_mapping.csv", "--gpu"]
+
+  # =================================================================================
+  # 🏛️ DETERMINISTIC COMPLIANCE AUDITOR AND SYSTEM INTEGRITY GATEWAY
+  # =================================================================================
+  validation-engine:
+    container_name: univac_ix_validator
+    image: node:18-alpine
+    restart: always
+    depends_on:
+      network-bridge:
+        condition: service_healthy # Holds validation execution back until twist-locks are verified healthy
+    volumes:
+      - shared-telemetry-fabric:/app/data
+      - ./validate-config.js:/app/validate-config.js:ro
+    working_dir: /app
+    environment:
+      - NODE_ENV=production
+    command: ["node", "validate-config.js"]
+
+volumes:
+  shared-telemetry-fabric:
+    name: shared_telemetry_fabric
+    driver: local
