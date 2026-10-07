@@ -105,6 +105,21 @@ self.health_file = "/tmp/bridge_health.state"
 with open(self.health_file, "w") as hf:
     hf.write("HEALTHY") # Initialize nominal state on system boot
 
+# --- Ingested inside the handle_node_stream loop of rt_json_network_bridge.py ---
+raw_dust_profile = packet.get("dust_density_profile", "LIGHT")
+
+# Map text configuration profiles directly to the 2-bit VHDL binary pin matrix representation
+if raw_dust_profile == "CAKED":
+    vhdl_dust_bits = "11"
+elif raw_dust_profile == "HEAVY":
+    vhdl_dust_bits = "10"
+elif raw_dust_profile == "MEDIUM":
+    vhdl_dust_bits = "01"
+else:
+    vhdl_dust_bits = "00" # Defaults to nominal light poultry profile
+
+print(f"[➔] Node Acceleration Engine: Routing VHDL Profile Bits [{vhdl_dust_bits}] to Logic Controllers.")
+
 # --- Add this step inside the handle_node_stream() processing loop ---
 twist_lock_secured = packet.get("twist_lock_hardware_latch", False)
 pins_present = packet.get("active_pins_detected", 0)
