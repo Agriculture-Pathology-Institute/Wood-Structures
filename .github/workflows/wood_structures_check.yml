@@ -1,0 +1,49 @@
+# File Path: .github/workflows/wood_structures_check.yml
+name: Wood-Structures Architectural Verification & Synthesis Loop
+
+on:
+  push:
+    branches: [ "main", "production" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  audit-enclosure-logic:
+    name: VHDL Gate Core Synthesis & Python Linter Pass
+    runs-on: ubuntu-24.04 # Hardened Linux environment baseline runner [1.22]
+
+    steps:
+    - name: Checkout Wood Structures Source Material
+      uses: actions/checkout@v4
+
+    - name: Initialize GHDL Hardware Compilation Engine
+      uses: ghdl/setup-ghdl-action@v3
+      with:
+        backend: llvm
+
+    - name: Compile and Lint rt_animal_gate_driver.vhd
+      run: |
+        echo "[*] Synthesizing animal-safe gate control logic lines..."
+        TARGET_VHDL="src/hardware/rt_animal_gate_driver.vhd"
+        if [ -f "$TARGET_VHDL" ]; then
+          ghdl -a --std=08 "$TARGET_VHDL"
+          echo "[+] Success: VHDL animal gate driver compiled without syntax anomalies."
+        else
+          echo "[-] Error: Core gate actuator control file missing from repository."
+          exit 1
+        fi
+
+    - name: Audit schedule_gate_routines.py Script Integrity
+      run: |
+        echo "[*] Linting multi-threaded routine scheduling engine..."
+        TARGET_SCRIPT="scripts/schedule_gate_routines.py"
+        if [ -f "$TARGET_SCRIPT" ]; then
+          python3 -m py_compile "$TARGET_SCRIPT"
+          echo "[+] Success: Python scheduling daemon verified clear of syntax failures."
+        else
+          echo "[-] Error: Scheduling engine script missing from repository."
+          exit 1
+        fi
