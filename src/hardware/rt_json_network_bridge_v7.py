@@ -44,6 +44,16 @@ def parallel_decode_fieldata(bit_stream_matrix):
             
     return decoded_output
 
+# --- Integrated into the handle_node_stream receiver thread within rt_json_network_bridge.py ---
+outbound_command = packet.get("control_room_action", "IDLE")
+
+if outbound_command == "TRIGGER_HANDSET_RING":
+    print("[➔] MAINFRAME: Outbound Ring Request Validated. Asserting VHDL Pin 12 -> HIGH.")
+    # Low-level VHDL interaction layer sets the command line high
+    vhdl_ring_register_bit = 1
+else:
+    vhdl_ring_register_bit = 0
+
 # ===================================================================================
 # 🏛️ OPERATIONAL GATEWAY TELEPHONY ROUTER
 # ===================================================================================
