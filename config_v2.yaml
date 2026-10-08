@@ -1,0 +1,16 @@
+# Append this configuration structure inside your global config_v2.yaml workspace file:
+
+# =========================================================================
+# DOMAIN ZONE: PLANETARY RFID PROXIMITY & AUTOMATED GATE ACCESS
+# Models secure tracking zones for livestock, staff, and autonomous fleets
+# =========================================================================
+rfid_proximity_access_control:
+  antenna_frequency_range_mhz: 915.0     # Industrial long-range ultra-high frequency band
+  maximum_capture_range_meters: 15.0      # Proximity sensing cushion for fast field vehicles
+  unauthorized_tag_lockout_duration_s: 300 # Lockout time window if intrusion is blocked
+  
+  # Structural gate execution time limits (seconds before timeout fault)
+  gate_profiles_execution_timeouts:
+    barn_lower_main_slider: 18.0
+    upper_skylight_drone_hatch: 8.5
+    livestock_sorting_swing_gate: 4.5
